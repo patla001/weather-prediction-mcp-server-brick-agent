@@ -1,0 +1,220 @@
+# Demo: natural-language questions → tool calls → answers
+
+All JSON below is **real output captured from this MCP server** on **2026-08-27**, driven
+through a real MCP client (`mcp_server/test_weather_tools.py` and the same in-memory
+`fastmcp.Client` harness). Reproduce it with:
+
+```bash
+cd weather/mcp_server && PREDICTION_LOG_ENABLED=false python test_weather_tools.py
+```
+
+The tool calls and answers below are exactly what the Agent Bricks agent does with the system
+prompt in [`AGENT_SYSTEM_PROMPT.md`](AGENT_SYSTEM_PROMPT.md); the final answers are written to
+that prompt's rules from the tool output shown. **After deploying, paste your Agent Bricks chat
+screenshots under each question** to show the same exchanges in the deployed agent.
+
+---
+
+## Q1. "Will it rain in Chicago tomorrow?"
+
+**Tool call:** `predict_umbrella_needed(location="Chicago", date="tomorrow")`
+
+```json
+{
+  "status": "success",
+  "location": "Chicago, Illinois, United States",
+  "date": "2026-08-28",
+  "timezone": "America/Chicago",
+  "umbrella_needed": false,
+  "verdict": "no",
+  "confidence": "high",
+  "precipitation_chance_pct": 2,
+  "precipitation_amount": 0.0,
+  "precipitation_type": "none",
+  "conditions": "Overcast",
+  "rain_window": null,
+  "better_alternative": null,
+  "reasoning": "2% chance of precipitation (yes at >= 40%, maybe at >= 25%); 0.0 in total expected.",
+  "notes": [],
+  "thresholds_used": {
+    "umbrella_yes_chance_pct": 40,
+    "umbrella_maybe_chance_pct": 25,
+    "umbrella_yes_amount_in": 0.1,
+    "umbrella_maybe_amount_in": 0.02,
+    "rainy_hour_chance_pct": 40,
+    "windy_gusts_mph": 25
+  }
+}
+```
+
+**Answer:** No - Chicago looks dry tomorrow (Fri Aug 28). The forecast puts precipitation at 2%
+with no measurable rain expected, well under the 40% threshold where I'd tell you to carry an
+umbrella. Expect an overcast day. Confidence is high at one day out.
+
+---
+
+## Q2. "Should I bring a jacket to Austin this weekend?"
+
+**Tool call 1:** `get_forecast(location="Austin, TX", days=4)` → to see which days the weekend covers
+
+```json
+{
+  "status": "success",
+  "location": "Austin, Texas, United States",
+  "timezone": "America/Chicago",
+  "days": [
+    { "date": "2026-08-29", "conditions": "Clear sky", "temp_high": 104.4, "temp_low": 74.6,
+      "feels_like_high": 106.5, "precipitation_chance_pct": 3, "wind_gusts_max": 27.5 },
+    { "date": "2026-08-30", "conditions": "Overcast", "temp_high": 102.4, "temp_low": 78.8,
+      "feels_like_high": 103.6, "precipitation_chance_pct": 1, "wind_gusts_max": 23.7 }
+  ]
+}
+```
+
+*(Saturday and Sunday rows shown; the call also returned Aug 27-28.)*
+
+**Tool call 2:** `get_travel_recommendation(location="Austin, TX", date="2026-08-29")`
+
+```json
+{
+  "status": "success",
+  "location": "Austin, Texas, United States",
+  "date": "2026-08-29",
+  "travel_risk": "moderate",
+  "recommendation": "Workable, but pack for it and leave margin in your schedule.",
+  "confidence": "high",
+  "conditions": "Clear sky",
+  "temp_high": 104.4,
+  "temp_low": 74.6,
+  "jacket_needed": false,
+  "umbrella_needed": false,
+  "packing_list": [
+    "layers - the day swings about 30 °F (74.6 to 104.4 °F)",
+    "water, sunscreen, and a shaded midday break"
+  ],
+  "cautions": [
+    "Heat: high near 104.4 °F.",
+    "Wind gusts near 28 mph - expect flight and bridge delays.",
+    "NWS Moderate alert: Heat Advisory."
+  ],
+  "active_alert_count": 1,
+  "reasoning": "High 104.4 / low 74.6 °F, 3% precipitation chance, gusts to 27.5 mph, 1 active NWS alert(s)."
+}
+```
+
+**Answer:** You will not need a jacket in Austin this weekend - the opposite, actually. Saturday
+hits 104 °F under a clear sky and Sunday 102 °F, with overnight lows only dropping to the
+mid-70s, so the jacket threshold (a low at or below 60 °F) is nowhere close. There's an active
+NWS **Heat Advisory**, and gusts near 28 mph could delay flights. Pack water, sunscreen, and plan
+a shaded midday break; the 30 °F daily swing means light layers for early morning are enough.
+
+---
+
+## Q3. "Is it a good weekend to drive to Miami, and do I need an umbrella?"
+
+**Tool call 1:** `get_severe_weather_alerts(location="Miami")`
+
+```json
+{
+  "status": "success",
+  "location": "Miami, Florida, United States",
+  "covered_by_nws": true,
+  "alert_count": 0,
+  "alerts": [],
+  "checked_at": "2026-08-27T22:38:58Z",
+  "source": "NOAA / National Weather Service (api.weather.gov)"
+}
+```
+
+**Tool call 2:** `get_travel_recommendation(location="Miami", date="2026-08-29")`
+
+```json
+{
+  "status": "success",
+  "location": "Miami, Florida, United States",
+  "date": "2026-08-29",
+  "travel_risk": "low",
+  "recommendation": "Good conditions - no weather reason to change plans.",
+  "confidence": "medium",
+  "temp_high": 88.6,
+  "temp_low": 78.2,
+  "precipitation_chance_pct": 32,
+  "precipitation_amount": 0.028,
+  "wind_gusts_max": 18.3,
+  "jacket_needed": false,
+  "umbrella_needed": true,
+  "packing_list": ["an umbrella"],
+  "cautions": [],
+  "active_alert_count": 0,
+  "alerts_checked": true,
+  "nws_coverage": true
+}
+```
+
+**Answer:** Yes - Saturday in Miami rates **low travel risk**, with no active NWS watches or
+warnings and a high near 89 °F. Do bring an umbrella: the 32% precipitation chance clears my 25%
+"maybe" threshold, though only about 0.03 in of rain is expected, so it's scattered-shower
+territory rather than a washout. No jacket needed with lows in the high 70s. Confidence is
+medium at two days out - worth a re-check Friday night.
+
+---
+
+## Q4. "What's the weather in Sprngfeld?" (error handling)
+
+**Tool call:** `get_current_weather(location="Sprngfeld")`
+
+```json
+{
+  "status": "error",
+  "message": "Could not find a location matching 'Sprngfeld'. Try a city name, a US ZIP code, or 'latitude,longitude'.",
+  "location_requested": "Sprngfeld",
+  "hint": "Ask the user to confirm the location (city name, US ZIP code, or 'latitude,longitude') or to try again shortly. Do not guess the weather."
+}
+```
+
+**Answer:** I couldn't find a location matching "Sprngfeld" - did you mean Springfield? There are
+several, so a state or ZIP code would help (Springfield, IL / Springfield, MA / 62701). I won't
+guess the weather for a location I can't resolve.
+
+---
+
+## Bonus: "Where should I go this Saturday - San Diego, Seattle, or Denver?"
+
+**Tool call:** `compare_cities(locations=["San Diego", "Seattle", "Denver"], date="2026-08-29")`
+
+```json
+{
+  "status": "success",
+  "date": "2026-08-29",
+  "best": "San Diego, California, United States",
+  "cities": [
+    { "location": "San Diego, California, United States", "conditions": "Fog",
+      "temp_high": 83.4, "temp_low": 68.8, "precipitation_chance_pct": 1,
+      "wind_gusts_max": 9.2, "comfort_score": 82.4 },
+    { "location": "Seattle, Washington, United States", "conditions": "Slight rain",
+      "temp_high": 71.7, "temp_low": 55.7, "precipitation_chance_pct": 72,
+      "wind_gusts_max": 12.1, "comfort_score": 63.6 },
+    { "location": "Denver, Colorado, United States", "conditions": "Light drizzle",
+      "temp_high": 89.2, "temp_low": 64.2, "precipitation_chance_pct": 27,
+      "wind_gusts_max": 26.6, "comfort_score": 49.1 }
+  ],
+  "score_note": "comfort_score is a heuristic: 100 minus 1.5 per °F away from 72 °F, minus half the precipitation chance, minus 1 per mph of gusts above 15 mph."
+}
+```
+
+**Answer:** San Diego, by a good margin (comfort score 82 vs 64 for Seattle and 49 for Denver).
+It's 83 °F with a 1% rain chance and light winds - morning fog is the only catch. Seattle is
+cooler at 72 °F but has a 72% chance of rain, and Denver is warmer at 89 °F with drizzle and
+gusts near 27 mph. That score is a rough "nicer day" heuristic, not a meteorological index.
+
+---
+
+## Error paths verified in `test_weather_tools.py`
+
+| Input | Result |
+|---|---|
+| `get_current_weather("Nowherecityville")` | `status: "error"` - "Could not find a location matching..." |
+| `get_forecast("Chicago", days=99)` | `status: "error"` - "Open-Meteo only forecasts 16 days ahead; got days=99" |
+| `predict_umbrella_needed("Chicago", date="not-a-date")` | `status: "error"` - "Could not read the date 'not-a-date'. Use 'today', 'tomorrow', or an ISO date like 2026-08-30." |
+| Lakebase unavailable | Tools still return weather; the audit-log write logs a warning and is skipped. |
+| weather.gov unreachable | `get_travel_recommendation` still answers with `alerts_checked: false`. |

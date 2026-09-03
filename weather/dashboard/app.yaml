@@ -1,0 +1,17 @@
+command:
+  - "python"
+  - "app.py"
+
+env:
+  - name: LAKEBASE_SECRET_SCOPE
+    value: "database"
+  - name: LAKEBASE_SECRET_KEY
+    value: "lakebase-url"
+  - name: PREDICTION_LOG_TABLE
+    value: "weather_predictions"
+  - name: WEATHER_DEFAULT_LOCATION
+    value: "San Diego, CA"
+  - name: WEATHER_DEFAULT_UNITS
+    value: "imperial"
+  - name: WEATHER_USER_AGENT
+    value: "weather-prediction-dashboard (Databricks Apps homework; epatlan1742@sdsu.edu)"

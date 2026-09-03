@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Weather Agent Dashboard - Agent Bricks + Weather MCP</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 16px; }
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.1rem; margin-top: 32px; }
+    .cards { display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap; }
+    .card { flex: 1; min-width: 150px; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    .card .label { color: #666; font-size: 0.85rem; }
+    .card .value { font-size: 1.4rem; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; font-size: 0.9rem; vertical-align: top; }
+    input, button { padding: 6px 10px; font-size: 0.9rem; }
+    button { cursor: pointer; }
+    .yes { color: #b3261e; font-weight: 600; }
+    .no { color: #0a7a2f; font-weight: 600; }
+    .note { color: #92400e; background: #fef3c7; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; }
+    .muted { color: #666; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>🌦️ Weather Agent Dashboard</h1>
+  <p class="muted">
+    Predictions the Agent Bricks agent made through the weather MCP server land in the Lakebase
+    <code>weather_predictions</code> table and show up here. The lookup panel below calls Open-Meteo
+    through the same adapter the agent's tools use.
+  </p>
+
+  <h2>Look up a location</h2>
+  <p>
+    <input id="location" size="28" value="{{ default_location }}">
+    <button id="lookup">Look up</button>
+    <span id="lookup-error" class="muted"></span>
+  </p>
+  <div class="cards">
+    <div class="card"><div class="label">Temperature</div><div class="value" id="temp">-</div></div>
+    <div class="card"><div class="label">Feels like</div><div class="value" id="feels">-</div></div>
+    <div class="card"><div class="label">Conditions</div><div class="value" id="conditions">-</div></div>
+    <div class="card"><div class="label">Wind</div><div class="value" id="wind">-</div></div>
+  </div>
+  <p class="muted" id="observed"></p>
+
+  <table>
+    <thead><tr><th>Date</th><th>Conditions</th><th>High</th><th>Low</th><th>Precip chance</th></tr></thead>
+    <tbody id="forecast-body"></tbody>
+  </table>
+
+  <h2>Recent agent predictions <button id="refresh">Refresh</button></h2>
+  <div id="log-note"></div>
+  <table>
+    <thead><tr><th>When</th><th>Tool</th><th>Location</th><th>For date</th><th>Verdict</th><th>User</th></tr></thead>
+    <tbody id="log-body"></tbody>
+  </table>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function lookup() {
+      const location = $('location').value.trim();
+      $('lookup-error').textContent = '';
+      const [current, forecast] = await Promise.all([
+        fetch(`/api/current?location=${encodeURIComponent(location)}`).then(r => r.json()),
+        fetch(`/api/forecast?location=${encodeURIComponent(location)}&days=5`).then(r => r.json()),
+      ]);
+
+      if (current.error) {
+        $('lookup-error').textContent = current.error;
+        return;
+      }
+
+      const u = current.units || {};
+      $('temp').textContent = `${current.temperature}${u.temperature}`;
+      $('feels').textContent = `${current.feels_like}${u.temperature}`;
+      $('conditions').textContent = current.conditions;
+      $('wind').textContent = `${current.wind_speed} ${u.wind_speed}`;
+      $('observed').textContent =
+        `${current.location} - observed ${current.observed_at} (${current.timezone}), humidity ${current.humidity_pct}%`;
+
+      const body = $('forecast-body');
+      body.innerHTML = '';
+      (forecast.days || []).forEach(day => {
+        const row = body.insertRow();
+        row.insertCell().textContent = day.date;
+        row.insertCell().textContent = day.conditions;
+        row.insertCell().textContent = `${day.temp_high}${u.temperature}`;
+        row.insertCell().textContent = `${day.temp_low}${u.temperature}`;
+        row.insertCell().textContent = `${day.precipitation_chance_pct ?? '-'}%`;
+      });
+    }
+
+    async function refreshLog() {
+      const data = await fetch('/api/predictions?limit=25').then(r => r.json());
+      $('log-note').innerHTML = data.note ? `<p class="note">${data.note}</p>` : '';
+
+      const body = $('log-body');
+      body.innerHTML = '';
+      (data.predictions || []).forEach(entry => {
+        const row = body.insertRow();
+        row.insertCell().textContent = entry.created_at;
+        row.insertCell().textContent = entry.tool;
+        row.insertCell().textContent = entry.location;
+        row.insertCell().textContent = entry.target_date || '-';
+        const verdict = row.insertCell();
+        verdict.textContent = entry.verdict || '-';
+        verdict.className = /yes|high/.test(entry.verdict || '') ? 'yes' : 'no';
+        row.insertCell().textContent = entry.user_email || '-';
+      });
+      if (!(data.predictions || []).length && !data.note) {
+        const row = body.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 6;
+        cell.className = 'muted';
+        cell.textContent = 'No predictions logged yet - ask the agent a weather question.';
+      }
+    }
+
+    $('lookup').addEventListener('click', lookup);
+    $('refresh').addEventListener('click', refreshLog);
+    $('location').addEventListener('keydown', (e) => { if (e.key === 'Enter') lookup(); });
+
+    lookup();
+    refreshLog();
+    setInterval(refreshLog, 30000);
+  </script>
+</body>
+</html>

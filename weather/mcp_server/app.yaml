@@ -1,0 +1,30 @@
+command:
+  - "python"
+  - "weather_mcp_server.py"
+
+resources:
+  - name: requirements
+    source:
+      path: ./requirements.txt
+
+env:
+  # Open-Meteo and weather.gov are keyless, so there are no API-key secrets
+  # here. The only secret this app reads is the Lakebase URL below, fetched
+  # at runtime via WorkspaceClient().secrets.get_secret() - never hardcoded.
+  - name: LAKEBASE_SECRET_SCOPE
+    value: "database"
+  - name: LAKEBASE_SECRET_KEY
+    value: "lakebase-url"
+  # Optional prediction audit log (powers the companion dashboard app).
+  # Set to "false" to run the MCP server with no Lakebase dependency at all.
+  - name: PREDICTION_LOG_ENABLED
+    value: "true"
+  - name: PREDICTION_LOG_TABLE
+    value: "weather_predictions"
+  - name: WEATHER_DEFAULT_UNITS
+    value: "imperial"
+  - name: WEATHER_HTTP_TIMEOUT
+    value: "15"
+  # weather.gov asks API clients to identify themselves with a contact address.
+  - name: WEATHER_USER_AGENT
+    value: "weather-prediction-mcp (Databricks Apps homework; epatlan1742@sdsu.edu)"

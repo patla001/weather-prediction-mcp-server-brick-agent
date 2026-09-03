@@ -205,3 +205,10 @@ Follow [Connect agents to external MCPs and tools](https://docs.databricks.com/a
   both folders for reference, in case you want to compare a fully local simulation against
   Alpaca's real paper-trading fills, or fall back to it if you don't want to create an Alpaca
   account.
+
+## Homework: weather-prediction MCP server
+
+`weather/` contains the homework build that follows this same pattern with weather tools instead
+of trading tools: a FastMCP server (`weather/mcp_server/`) backed by Open-Meteo + the NWS API,
+and an optional dashboard app (`weather/dashboard/`). See
+[`weather/README.md`](weather/README.md) for its architecture, tool list, and setup steps.
