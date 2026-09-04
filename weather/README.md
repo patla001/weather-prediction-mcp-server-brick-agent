@@ -154,8 +154,12 @@ Both apps run in the `dbc-7e085092-52e4` workspace, deployed from this repo's Gi
 
 | App | URL | Notes |
 | --- | --- | --- |
-| `mcp-weather-prediction` | `https://mcp-weather-prediction-2808874854650870.aws.databricksapps.com/mcp` | MCP endpoint - the `/mcp` suffix is required when registering it |
-| `weather-agent-dashboard` | `https://weather-agent-dashboard-2808874854650870.aws.databricksapps.com` | Recent predictions + live lookup |
+| `weather-agent-dashboard` | **[Open the dashboard](https://weather-agent-dashboard-2808874854650870.aws.databricksapps.com)** | Recent agent predictions from Lakebase + a live lookup panel; refreshes every 30s |
+| `mcp-weather-prediction` | [App home](https://mcp-weather-prediction-2808874854650870.aws.databricksapps.com) - MCP endpoint is `https://mcp-weather-prediction-2808874854650870.aws.databricksapps.com/mcp` | The `/mcp` suffix is required; the app home page itself is not the endpoint |
+
+Both are behind Databricks workspace auth, so open them in a browser signed in to the
+workspace. Only `predict_umbrella_needed` and `get_travel_recommendation` write to the log, so
+the dashboard shows judgments the agent made rather than every raw data fetch.
 
 Both read the Lakebase URL from the `database` / `weather-lakebase-url` secret at runtime.
 Each Databricks App gets its own service principal, and each one needs `READ` granted on the
@@ -168,7 +172,7 @@ secret scope separately - a fresh app inherits nothing.
 ```bash
 cd weather/mcp_server
 pip install -r requirements.txt
-PREDICTION_LOG_ENABLED=false python test_weather_tools.py   # exercises all 8 tools
+PREDICTION_LOG_ENABLED=false python test_weather_tools.py   # exercises all 9 tools
 PREDICTION_LOG_ENABLED=false python weather_mcp_server.py   # serves MCP on :8000/mcp
 ```
 

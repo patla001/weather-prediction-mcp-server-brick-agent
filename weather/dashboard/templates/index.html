@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Weather Agent Dashboard - Agent Bricks + Weather MCP</title>
+  <title>Weather Agent Dashboard - AI Playground + Weather MCP</title>
   <style>
     body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 16px; }
     h1 { font-size: 1.4rem; }
@@ -24,8 +24,10 @@
 <body>
   <h1>🌦️ Weather Agent Dashboard</h1>
   <p class="muted">
-    Predictions the Agent Bricks agent made through the weather MCP server land in the Lakebase
-    <code>weather_predictions</code> table and show up here. The lookup panel below calls Open-Meteo
+    Predictions the agent made through the weather MCP server land in the Lakebase
+    <code>weather_predictions</code> table and show up here. Only the two judgment tools
+    (<code>predict_umbrella_needed</code> and <code>get_travel_recommendation</code>) are logged,
+    so this is a record of decisions rather than every data fetch. The lookup panel below calls Open-Meteo
     through the same adapter the agent's tools use.
   </p>
 
