@@ -206,14 +206,41 @@ Same Git-folder flow as Day 3's step 5:
 Repeat for the dashboard, pointing at `.../weather/dashboard/` and naming it
 `weather-agent-dashboard`.
 
-### 4. Register the MCP server as an external MCP
+### 4. Connect an agent to the MCP server
 
-Following [Connect agents to external MCPs](https://docs.databricks.com/aws/en/agents/mcp-tools/connect-external):
+This is a **custom MCP server** (self-hosted as a Databricks App), not an *external* MCP
+Service. The two are wired up differently, and the AI Gateway route does not apply here:
+Databricks states that "registering Genie, Apps, or Unity Catalog entity sources as an MCP
+Service is not currently supported"
+([external MCP servers](https://docs.databricks.com/aws/en/generative-ai/mcp/external-mcp)).
+AI Gateway / MCP Services is for MCP servers hosted *outside* Databricks.
 
-1. **AI Gateway → MCPs → Add MCP** (register external MCP).
-2. Paste `https://<mcp-weather-prediction-app-url>/mcp` as the server endpoint (streamable HTTP).
-3. Name it `weather-prediction`. Databricks introspects the server and lists all 8 tools.
-4. Grant the agent access to the MCP server if prompted.
+Two supported paths, per
+[Host your own MCP server](https://docs.databricks.com/aws/en/agents/mcp-tools/custom-mcp) and
+[Use MCP servers in Custom Agents](https://docs.databricks.com/aws/en/agents/mcp-tools/use-mcp-in-agents):
+
+**a. AI Playground (no code).** Because the app is named `mcp-weather-prediction`, the Playground
+recognizes it as an MCP server - "the app name must start with `mcp-` to be recognized as an MCP
+server in the AI Playground". Open the Playground, pick a model, add the app under tools, paste
+the system prompt from [`AGENT_SYSTEM_PROMPT.md`](AGENT_SYSTEM_PROMPT.md), and ask it the
+questions in [`DEMO.md`](DEMO.md). Access is governed by Databricks Apps permissions, so anyone
+else testing it needs *Can use* on the app.
+
+**b. Agent code.** Connect directly with `databricks_mcp`, which handles auth for you:
+
+```python
+from databricks_mcp import DatabricksMCPClient
+from databricks.sdk import WorkspaceClient
+
+mcp_client = DatabricksMCPClient(
+    server_url="https://mcp-weather-prediction-2808874854650870.aws.databricksapps.com/mcp",
+    workspace_client=WorkspaceClient(),
+)
+tools = mcp_client.list_tools()   # the 8 weather tools
+```
+
+When deploying such an agent as its own App, declare this MCP app as a resource in
+`databricks.yml` so the agent's service principal is granted access.
 
 ### 5. Build the Agent Bricks agent
 
