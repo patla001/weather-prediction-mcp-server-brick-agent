@@ -218,3 +218,92 @@ gusts near 27 mph. That score is a rough "nicer day" heuristic, not a meteorolog
 | `predict_umbrella_needed("Chicago", date="not-a-date")` | `status: "error"` - "Could not read the date 'not-a-date'. Use 'today', 'tomorrow', or an ISO date like 2026-08-30." |
 | Lakebase unavailable | Tools still return weather; the audit-log write logs a warning and is skipped. |
 | weather.gov unreachable | `get_travel_recommendation` still answers with `alerts_checked: false`. |
+
+---
+
+## Full agent transcript (live, against the deployed app)
+
+Everything below was produced by `python weather/run_agent_demo.py`, which connects to the
+deployed MCP server over streamable HTTP, hands its 8 tool schemas to
+`databricks-claude-sonnet-5`, and runs the real tool-calling loop with
+[`AGENT_SYSTEM_PROMPT.md`](AGENT_SYSTEM_PROMPT.md) as the system prompt. Tool results are
+truncated to 220 characters for readability; nothing else is edited.
+
+This is the same MCP server, tool schemas, and prompt the AI Playground uses. The script exists
+because the Playground was intermittently returning
+`INTERNAL_ERROR ... chat completion failed after 5 attempts` from the upstream model provider,
+which is a serving-side fault unrelated to these tools - the same requests succeeded 16/16 when
+sent directly to the endpoint.
+
+Note what each question demonstrates:
+
+| Question | Shows |
+| --- | --- |
+| Chicago rain | threshold logic quoted back (11% vs the 40%/25% thresholds), not a raw API echo |
+| Austin jacket | multi-day reasoning, and a heat caution instead of a jacket |
+| Saturday city choice | `compare_cities` in one call, ranked by comfort score |
+| Oklahoma City alerts | a real NWS Heat Advisory, live from weather.gov |
+| `Sprngfeld` | the guardrail - it asks rather than guessing which Springfield |
+
+```
+connected to MCP server: weather-prediction v4.0.2
+tools available: 8
+model: databricks-claude-sonnet-5
+
+==============================================================================
+Q: Will it rain in Chicago tomorrow?
+==============================================================================
+  tool call: predict_umbrella_needed({"location": "Chicago", "date": "tomorrow"})
+  tool result: {"status":"success","location":"Chicago, Illinois, United States","date":"2026-09-05","timezone":"America/Chicago","units":{"temperature":"°F","wind_speed":"mph","precipitation":"in"},"source":"Open-Meteo","umbrella_need ...
+
+Answer:
+No, you won't need an umbrella in Chicago tomorrow (Sept 5). There's only an 11% chance of precipitation with 0.0 in expected — well below the 40% "yes" and 25% "maybe" thresholds. Expect some fog instead of rain, and this is a high-confidence forecast.
+
+==============================================================================
+Q: Should I bring a jacket to Austin this weekend?
+==============================================================================
+  tool call: get_forecast({"location": "Austin, TX", "days": 7})
+  tool result: {"status":"success","location":"Austin, Texas, United States","latitude":30.269146,"longitude":-97.75338,"timezone":"America/Chicago","days":[{"date":"2026-09-04","conditions":"Overcast","weather_code":3,"precipitation_t ...
+  tool call: get_travel_recommendation({"location": "Austin, TX", "date": "2026-09-05"})
+  tool result: {"status":"success","location":"Austin, Texas, United States","date":"2026-09-05","timezone":"America/Chicago","units":{"temperature":"°F","wind_speed":"mph","precipitation":"in"},"alerts_checked":true,"nws_coverage":tru ...
+  tool call: get_travel_recommendation({"location": "Austin, TX", "date": "2026-09-06"})
+  tool result: {"status":"success","location":"Austin, Texas, United States","date":"2026-09-06","timezone":"America/Chicago","units":{"temperature":"°F","wind_speed":"mph","precipitation":"in"},"alerts_checked":true,"nws_coverage":tru ...
+
+Answer:
+No jacket needed this weekend in Austin, Texas — it's going to be hot, not cold. Saturday (9/5) hits a high of 97°F/low 78°F, and Sunday (9/6) climbs to 99°F/low 80°F, both well above the 60°F jacket threshold. Rain chances are low (14% and 9%), so no umbrella either. Instead, pack water, sunscreen, and plan a shaded midday break — the moderate travel risk rating is driven by heat, not storms.
+
+==============================================================================
+Q: Where should I go this Saturday - San Diego, Seattle, or Denver?
+==============================================================================
+  tool call: get_forecast({"location": "San Diego", "days": 7})
+  tool result: {"status":"success","location":"San Diego, California, United States","latitude":32.720078,"longitude":-117.15093,"timezone":"America/Los_Angeles","days":[{"date":"2026-09-03","conditions":"Fog","weather_code":45,"precip ...
+  tool call: compare_cities({"locations": ["San Diego", "Seattle", "Denver"], "date": "2026-09-05"})
+  tool result: {"status":"success","date":"2026-09-05","cities":[{"location":"Seattle, Washington, United States","date":"2026-09-05","conditions":"Dense drizzle","temp_high":68.5,"temp_low":53.2,"precipitation_chance_pct":10,"wind_gus ...
+
+Answer:
+**Seattle** comes out on top for this Saturday, Sept 5.
+
+- **Seattle**: high 69°F, low 53°F, only 10% precip chance (dense drizzle, mostly light), gusts to 18 mph — comfort score 86.5.
+- **San Diego**: high 84°F, low 62°F, 6% precip chance, calmer winds — comfort score 79.6 (a solid runner-up, just warmer than the ideal).
+- **Denver**: high 90°F, low 61°F, 15% precip chance — comfort score 65.4, dragged down by the heat.
+
+Note this is a rough comfort heuristic (temperature closeness to 72°F, rain chance, and wind), not a hard forecast guarantee — but if you want mild, low-rain weather, Seattle's the pick; San Diego is a close, sunnier-feeling alternative if you prefer warmth.
+
+==============================================================================
+Q: Are there any severe weather alerts for Oklahoma City?
+==============================================================================
+  tool call: get_severe_weather_alerts({"location": "Oklahoma City"})
+  tool result: {"status":"success","location":"Oklahoma City, Oklahoma, United States","covered_by_nws":true,"alert_count":1,"alerts":[{"event":"Heat Advisory","severity":"Moderate","urgency":"Expected","certainty":"Likely","headline": ...
+
+Answer:
+Yes — Oklahoma City currently has a **Heat Advisory** (moderate severity) in effect from 1:00 AM to 7:00 PM CDT on September 4, issued by NWS Norman. The advisory covers Oklahoma County and much of central/southern Oklahoma, with guidance to drink plenty of fluids, stay in air conditioning, avoid direct sun, and check on relatives and neighbors. No other alerts are active right now.
+
+==============================================================================
+Q: What's the weather in Sprngfeld?
+==============================================================================
+  tool call: get_current_weather({"location": "Sprngfeld"})
+  tool result: {"status":"error","message":"Could not find a location matching 'Sprngfeld'. Try a city name, a US ZIP code, or 'latitude,longitude'.","location_requested":"Sprngfeld","hint":"Ask the user to confirm the location (city n ...
+
+Answer:
+I couldn't find a location called "Sprngfeld" — it looks like it might be a typo. There are also several well-known "Springfield"s (Illinois, Missouri, Massachusetts, Oregon, etc.), so could you confirm which one you mean, or give me a US ZIP code or "latitude,longitude"?
+```
