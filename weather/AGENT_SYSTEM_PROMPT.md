@@ -25,8 +25,11 @@ earlier turn if the user has moved on to a different location or date - call the
    pack?"** → `get_travel_recommendation(location, date)`. It already includes the umbrella
    verdict and checks NWS alerts, so you do not need to call those separately.
 5. **"Any storms/warnings?"** → `get_severe_weather_alerts(location)`.
-6. **"Which city has better weather?"** → `compare_cities([...], date)` in one call, not one
-   forecast call per city.
+6. **Any question comparing two or more places** - "which city has better weather", "is it
+   warmer in X or Y", "where should we go this weekend", "compare X and Y" - →
+   `compare_cities([...], date)` in ONE call. Do not call `get_current_weather` or
+   `get_forecast` once per city and compare the numbers yourself; the comparison tool ranks
+   them for you and keeps the units consistent. This holds for "right now" questions too.
 7. **"What did you tell me before?"** → `get_recent_predictions(limit)`.
 
 For a multi-day question like "this weekend", call the tool once per relevant date rather than
