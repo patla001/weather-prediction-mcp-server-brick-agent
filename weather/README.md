@@ -147,6 +147,19 @@ Shared modules are duplicated between the two app folders for the same reason Da
 `alpaca_broker.py`: each Databricks App deploys independently from its own folder with its own
 `requirements.txt`, and there is no shared package install step across Apps.
 
+## Deployed apps
+
+Both apps run in the `dbc-7e085092-52e4` workspace, deployed from this repo's Git folder:
+
+| App | URL | Notes |
+| --- | --- | --- |
+| `mcp-weather-prediction` | `https://mcp-weather-prediction-2808874854650870.aws.databricksapps.com/mcp` | MCP endpoint - the `/mcp` suffix is required when registering it |
+| `weather-agent-dashboard` | `https://weather-agent-dashboard-2808874854650870.aws.databricksapps.com` | Recent predictions + live lookup |
+
+Both read the Lakebase URL from the `database` / `weather-lakebase-url` secret at runtime.
+Each Databricks App gets its own service principal, and each one needs `READ` granted on the
+secret scope separately - a fresh app inherits nothing.
+
 ## Setup
 
 ### 1. Run it locally (no credentials at all)
