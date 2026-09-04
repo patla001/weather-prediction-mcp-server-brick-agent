@@ -1,8 +1,7 @@
-# Weather-Prediction MCP Server + Agent Bricks Agent
+# Weather-Prediction MCP Server + Agent
 
-Homework build for Day 3 (`databricks-lakebase-app-day-3`). Same shape as the Alpaca
-paper-trading reference in `../mcp_server/` + `../dashboard/`, but the tools answer weather
-questions instead of placing trades.
+Homework build for Day 3. Same shape as the Alpaca paper-trading reference in `../mcp_server/`
+and `../dashboard/`, but the tools answer weather questions instead of placing trades.
 
 - **`mcp_server/`** - a FastMCP server exposing weather tools over streamable HTTP, deployed as
   its own Databricks App and registered as an external MCP server for an Agent Bricks agent.
@@ -209,7 +208,7 @@ Same Git-folder flow as Day 3's step 5:
 1. Create (or reuse) a Databricks Git folder for this repo.
 2. **Compute → Apps → Create app → Custom**, name it `mcp-weather-prediction` (Databricks requires the `mcp-` prefix for an
    App to be recognized as an MCP server in the AI Playground), and point its
-   source at `databricks-lakebase-app-day-3/weather/mcp_server/` so it picks up that folder's
+   source at `<git-folder>/weather/mcp_server/` so it picks up that folder's
    `app.yaml`.
 3. Deploy, then copy the app URL. The MCP endpoint is that URL plus `/mcp`.
 
