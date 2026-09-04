@@ -14,7 +14,7 @@ env:
   - name: LAKEBASE_SECRET_SCOPE
     value: "database"
   - name: LAKEBASE_SECRET_KEY
-    value: "lakebase-url"
+    value: "weather-lakebase-url"
   # Optional prediction audit log (powers the companion dashboard app).
   # Set to "false" to run the MCP server with no Lakebase dependency at all.
   - name: PREDICTION_LOG_ENABLED
