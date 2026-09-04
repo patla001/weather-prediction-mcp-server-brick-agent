@@ -307,3 +307,64 @@ Q: What's the weather in Sprngfeld?
 Answer:
 I couldn't find a location called "Sprngfeld" — it looks like it might be a typo. There are also several well-known "Springfield"s (Illinois, Missouri, Massachusetts, Oregon, etc.), so could you confirm which one you mean, or give me a US ZIP code or "latitude,longitude"?
 ```
+
+---
+
+## AI Playground (screenshots)
+
+Captured from **Machine Learning → Playground** with model **Claude Opus 5** and the
+`mcp-weather-prediction` app attached under **Tools (1)**. The system prompt is
+[`AGENT_SYSTEM_PROMPT.md`](AGENT_SYSTEM_PROMPT.md), pasted into the Playground's system-prompt
+field (not the chat box - pasting it as a chat message makes the model treat it as a user turn).
+
+> **User:** Will it rain in San Diego California tomorrow?
+
+> *I'm going to use predict_umbrella_needed*
+
+```json
+{
+  "location": "San Diego, CA",
+  "date": "tomorrow"
+}
+```
+
+Output:
+
+```json
+{
+  "status": "success",
+  "location": "San Diego, California, United States",
+  "date": "2026-09-04",
+  "timezone": "America/Los_Angeles",
+  "units": { "temperature": "°F", "wind_speed": "mph", "precipitation": "in" },
+  "source": "Open-Meteo",
+  "umbrella_needed": false,
+  "verdict": "no",
+  "confidence": "high",
+  "precipitation_chance_pct": 0,
+  "precipitation_amount": 0,
+  "precipitation_type": "none",
+  "conditions": "Overcast",
+  "rain_window": null,
+  "better_alternative": null,
+  "reasoning": "0% chance of precipitation (yes at >= 40%, maybe at >= 25%); 0.0 in total expected.",
+  "notes": [],
+  "thresholds_used": {
+    "umbrella_yes_chance_pct": 40,
+    "umbrella_maybe_chance_pct": 25,
+    "umbrella_yes_amount_in": 0.1,
+    "umbrella_maybe_amount_in": 0.02,
+    "rainy_hour_chance_pct": 40,
+    "windy_gusts_mph": 25
+  }
+}
+```
+
+> **Agent:** No rain in San Diego, California tomorrow - no umbrella needed. The tool reports a
+> 0% chance of precipitation and 0.0 in expected, far below the 40% umbrella threshold, with
+> high confidence. Just overcast skies.
+
+The final answer cites the **40% threshold** and the **confidence level** rather than restating
+a raw forecast number - the judgment happens in `forecast_rules.py`, and the agent reports it.
+
+*(Screenshots of this exchange: `playground-tool-call.png`, `playground-answer.png`.)*
