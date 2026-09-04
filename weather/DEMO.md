@@ -368,3 +368,75 @@ The final answer cites the **40% threshold** and the **confidence level** rather
 a raw forecast number - the judgment happens in `forecast_rules.py`, and the agent reports it.
 
 *(Screenshots of this exchange: `playground-tool-call.png`, `playground-answer.png`.)*
+
+### Second Playground exchange - `get_forecast`
+
+> **User:** what is the weather for tomorrow in San Diego, California?
+
+> *The user wants tomorrow's full forecast for San Diego, so I need get_forecast with 2 days
+> (today + tomorrow) to report tomorrow's highs, lows, and conditions.*
+
+```json
+{
+  "location": "San Diego, CA",
+  "days": 2
+}
+```
+
+Output (day 1 abbreviated; day 2 is the one the question is about):
+
+```json
+{
+  "status": "success",
+  "location": "San Diego, California, United States",
+  "latitude": 32.720078,
+  "longitude": -117.15093,
+  "timezone": "America/Los_Angeles",
+  "days": [
+    {
+      "date": "2026-09-04",
+      "conditions": "Overcast",
+      "weather_code": 3,
+      "precipitation_type": "none",
+      "temp_high": 78.2,
+      "temp_low": 60.3,
+      "feels_like_high": 82.3,
+      "feels_like_low": 60.7,
+      "precipitation_chance_pct": 0,
+      "precipitation_amount": 0,
+      "wind_speed_max": 9.2
+    },
+    {
+      "date": "2026-09-05",
+      "conditions": "Overcast",
+      "weather_code": 3,
+      "precipitation_type": "none",
+      "temp_high": 83.6,
+      "temp_low": 62.3,
+      "feels_like_high": 86.4,
+      "feels_like_low": 63.1,
+      "precipitation_chance_pct": 7,
+      "precipitation_amount": 0,
+      "wind_speed_max": 7.9,
+      "wind_gusts_max": 11,
+      "sunrise": "2026-09-05T06:26",
+      "sunset": "2026-09-05T19:08"
+    }
+  ],
+  "units": { "temperature": "°F", "wind_speed": "mph", "precipitation": "in" },
+  "source": "Open-Meteo"
+}
+```
+
+> **Agent:** Tomorrow, Saturday September 5, 2026, in San Diego, California looks warm and
+> cloudy: overcast with a high near 84°F (feeling like about 86°F) and an overnight low around
+> 62°F. Rain is essentially off the table at a 7% chance with no measurable precipitation, and
+> winds stay light at up to 8 mph with gusts near 11 mph. No umbrella needed - just expect gray
+> skies and a mild morning.
+
+Two things this exchange shows. The agent states its plan before calling the tool ("I need
+get_forecast with 2 days (today + tomorrow)"), and it names the date - "Saturday September 5,
+2026" - by reading `days[].date` out of the tool response rather than assuming what tomorrow is.
+That is the behavior the relative-date rule in the system prompt exists to enforce.
+
+*(Screenshots: `playground-forecast-call.png`, `playground-forecast-answer.png`.)*
