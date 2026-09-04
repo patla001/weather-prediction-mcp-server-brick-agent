@@ -10,6 +10,7 @@ Data sources (both free, neither needs an API key or a signup):
     - Open-Meteo geocoding  https://geocoding-api.open-meteo.com/v1/search
     - Open-Meteo forecast   https://api.open-meteo.com/v1/forecast
     - NWS active alerts     https://api.weather.gov/alerts/active   (US only)
+    - Open-Meteo archive    https://archive-api.open-meteo.com/v1/archive  (past dates)
 
 Because Open-Meteo is keyless, there are no credentials to manage here -
 see `lakebase.py` for the `WorkspaceClient().secrets.get_secret()` pattern
@@ -29,6 +30,7 @@ import requests
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 NWS_ALERTS_URL = "https://api.weather.gov/alerts/active"
+ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 
 # Open-Meteo only publishes 16 days of forecast.
 MAX_FORECAST_DAYS = 16
@@ -490,6 +492,148 @@ def get_day_forecast(
         "hourly": _hours_for_date(detailed, target_iso),
         "units": _units_label(units),
         "source": "Open-Meteo",
+    }
+
+
+# --------------------------------------------------------------------------
+# Historical observations (Open-Meteo archive API, also keyless)
+# --------------------------------------------------------------------------
+
+# The archive reports what actually happened, so there is no
+# precipitation_probability_max here - a past day's rain is a fact, not a
+# chance. It does break precipitation down by rain vs snowfall, which the
+# forecast endpoint does not.
+_ARCHIVE_DAILY_FIELDS = (
+    "weather_code,temperature_2m_max,temperature_2m_min,"
+    "apparent_temperature_max,apparent_temperature_min,"
+    "precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,"
+    "wind_speed_10m_max,wind_gusts_10m_max,sunrise,sunset"
+)
+
+# The ERA5 archive lags real time by a few days, so recent history comes from
+# the forecast endpoint's past_days window instead - it reaches 92 days back
+# and covers yesterday, which the archive does not.
+RECENT_PAST_DAYS = 92
+
+
+def _archive_row(payload: dict, index: int = 0) -> dict:
+    """Flatten one observed day out of the column-oriented daily arrays."""
+    daily = payload.get("daily") or {}
+
+    def col(name):
+        values = daily.get(name) or []
+        return values[index] if index < len(values) else None
+
+    code = col("weather_code")
+    return {
+        "date": col("time"),
+        "conditions": describe_code(code),
+        "weather_code": code,
+        "precipitation_type": precipitation_type(code),
+        "temp_high": col("temperature_2m_max"),
+        "temp_low": col("temperature_2m_min"),
+        "feels_like_high": col("apparent_temperature_max"),
+        "feels_like_low": col("apparent_temperature_min"),
+        "precipitation_amount": col("precipitation_sum"),
+        "rain_amount": col("rain_sum"),
+        "snowfall_amount": col("snowfall_sum"),
+        "precipitation_hours": col("precipitation_hours"),
+        "wind_speed_max": col("wind_speed_10m_max"),
+        "wind_gusts_max": col("wind_gusts_10m_max"),
+        "sunrise": col("sunrise"),
+        "sunset": col("sunset"),
+    }
+
+
+def get_historical_weather(
+    location: str, target_date: str, units: str = "imperial"
+) -> dict:
+    """
+    What the weather actually was on a past date.
+
+    Uses Open-Meteo's archive endpoint rather than the forecast endpoint, so
+    the numbers are observations, not predictions. Dates inside the forecast
+    window are rejected with a pointer to `get_forecast`, because answering a
+    future question from the archive would silently return nothing useful.
+    """
+    place = geocode(location)
+
+    # One cheap forecast call establishes "today" in the location's own
+    # timezone - the same trick get_day_forecast uses. A date is only
+    # historical relative to where it is being asked about.
+    calendar = _fetch_forecast(place, days=1, units=units)
+    dates = (calendar.get("daily") or {}).get("time") or []
+    if not dates:
+        raise WeatherError("The weather service did not return a forecast calendar")
+    local_today = _date.fromisoformat(dates[0])
+
+    text = (target_date or "").strip().lower()
+    if text == "yesterday":
+        target = local_today - timedelta(days=1)
+    elif text in ("", "today", "tomorrow"):
+        raise WeatherError(
+            f"{text or 'an empty date'!r} is not a past date. Use get_forecast or "
+            "the prediction tools for today and the days ahead."
+        )
+    else:
+        target = _normalize_date(target_date, local_today)
+
+    if target >= local_today:
+        raise WeatherError(
+            f"{target.isoformat()} is not in the past at {_place_label(place)} "
+            f"(local today is {local_today.isoformat()}). Use get_forecast or "
+            "predict_umbrella_needed for today and future dates."
+        )
+
+    target_iso = target.isoformat()
+    days_ago = (local_today - target).days
+
+    if days_ago <= RECENT_PAST_DAYS:
+        # Recent history: the forecast endpoint's past_days window. The ERA5
+        # archive lags a few days and would return nothing for yesterday.
+        payload = _get(FORECAST_URL, {
+            "latitude": place["latitude"],
+            "longitude": place["longitude"],
+            "daily": _ARCHIVE_DAILY_FIELDS,
+            "timezone": "auto",
+            "past_days": days_ago,
+            "forecast_days": 1,
+            **_unit_params(units),
+        })
+        source = "Open-Meteo (recent past days)"
+        index = None
+        times = (payload.get("daily") or {}).get("time") or []
+        if target_iso in times:
+            index = times.index(target_iso)
+    else:
+        payload = _get(ARCHIVE_URL, {
+            "latitude": place["latitude"],
+            "longitude": place["longitude"],
+            "start_date": target_iso,
+            "end_date": target_iso,
+            "daily": _ARCHIVE_DAILY_FIELDS,
+            "timezone": "auto",
+            **_unit_params(units),
+        })
+        source = "Open-Meteo archive (ERA5 reanalysis)"
+        times = (payload.get("daily") or {}).get("time") or []
+        index = 0 if times else None
+
+    if index is None:
+        raise WeatherError(
+            f"No observations available for {target_iso} at {_place_label(place)}."
+        )
+
+    return {
+        "location": _place_label(place),
+        "latitude": payload.get("latitude"),
+        "longitude": payload.get("longitude"),
+        "timezone": payload.get("timezone"),
+        "date": target_iso,
+        "days_ago": days_ago,
+        "observed": _archive_row(payload, index),
+        "units": _units_label(units),
+        "source": source,
     }
 
 

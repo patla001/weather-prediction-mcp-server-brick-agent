@@ -34,12 +34,15 @@ CASES = [
     ("predict_umbrella_needed", {"location": "Mumbai", "date": "tomorrow"}),
     ("get_travel_recommendation", {"location": "92182", "date": "tomorrow"}),
     ("get_severe_weather_alerts", {"location": "Miami"}),
+    ("get_historical_weather", {"location": "Seattle", "date": "yesterday"}),
+    ("get_historical_weather", {"location": "Anchorage", "date": "2026-02-14"}),
     ("compare_cities", {"locations": ["San Diego", "Chicago", "Seattle"], "date": "tomorrow"}),
     ("get_recent_predictions", {"limit": 5}),
     ("get_current_user", {}),
     # Error paths: the agent should see clean messages, never a traceback.
     ("get_current_weather", {"location": "Nowherecityville"}),
     ("get_forecast", {"location": "Chicago", "days": 99}),
+    ("get_historical_weather", {"location": "Chicago", "date": "2099-01-01"}),
     ("predict_umbrella_needed", {"location": "Chicago", "date": "not-a-date"}),
 ]
 

@@ -57,6 +57,7 @@ Three layers, deliberately separated (this mirrors `alpaca_mcp_server.py` / `alp
 | `predict_umbrella_needed(location, date, units)` | **Required #3.** Derived judgment - see the rule below. |
 | `get_travel_recommendation(location, date, units)` | *Stretch.* Travel risk rating + packing list + cautions, forecast combined with active NWS alerts. |
 | `get_severe_weather_alerts(location)` | *Stretch.* Active NOAA/NWS watches, warnings, and advisories (US only; reports `covered_by_nws: false` outside the US instead of implying all-clear). |
+| `get_historical_weather(location, date, units)` | *Stretch.* What the weather actually **was** on a past date - observations, not a forecast. Recent dates come from Open-Meteo's past-days window, older ones from the ERA5 archive; the `source` field says which. Refuses future dates. |
 | `compare_cities(locations, date, units)` | *Stretch.* Ranks 2-5 cities for one day by a documented comfort-score heuristic. |
 | `get_recent_predictions(limit)` | *Stretch.* Reads back this server's Lakebase prediction log ("what did you tell me about Austin yesterday?"). |
 | `get_current_user()` | Returns the calling end user from Databricks' `X-Forwarded-User` header, same pattern as Day 3. |

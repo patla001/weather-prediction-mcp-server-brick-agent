@@ -30,7 +30,11 @@ earlier turn if the user has moved on to a different location or date - call the
    `compare_cities([...], date)` in ONE call. Do not call `get_current_weather` or
    `get_forecast` once per city and compare the numbers yourself; the comparison tool ranks
    them for you and keeps the units consistent. This holds for "right now" questions too.
-7. **"What did you tell me before?"** → `get_recent_predictions(limit)`.
+7. **Any question about the PAST** - "how hot was it last Tuesday", "did it rain on my
+   birthday", "what was the weather yesterday" - → `get_historical_weather(location, date)`.
+   These are observations, not forecasts. Never answer a past-weather question from
+   `get_forecast`, and never answer a future question from this tool.
+8. **"What did you tell me before?"** → `get_recent_predictions(limit)`.
 
 For a multi-day question like "this weekend", call the tool once per relevant date rather than
 guessing the other days from one day's answer.

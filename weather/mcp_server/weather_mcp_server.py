@@ -334,6 +334,42 @@ def get_severe_weather_alerts(location: str) -> dict:
 
 
 @mcp.tool
+def get_historical_weather(
+    location: str, date: str, units: str = DEFAULT_UNITS
+) -> dict:
+    """
+    Look up what the weather actually was on a past date.
+
+    These are observations, not predictions - use this when the question is
+    about the past ("how hot was it last Tuesday", "did it rain on my
+    birthday"). For today or any future date use get_forecast or the
+    prediction tools instead; this tool refuses future dates rather than
+    guessing.
+
+    Recent dates come from Open-Meteo's past-days window and older ones from
+    the ERA5 reanalysis archive; the `source` field says which was used. The
+    date is interpreted in the *location's* local timezone, so "yesterday" in
+    Seattle and "yesterday" in Tokyo can be different calendar days.
+
+    Args:
+        location: City name, US ZIP code, or "latitude,longitude".
+        date: "yesterday" or an ISO date like 2026-08-01. Must be in the past.
+        units: "imperial" (default) or "metric".
+
+    Returns:
+        A dict with status, location, date, days_ago, source, units, and
+        observed - which holds conditions, temp_high, temp_low, feels_like
+        extremes, precipitation_amount, rain_amount, snowfall_amount,
+        precipitation_hours, wind_speed_max, wind_gusts_max, sunrise, and
+        sunset. On failure, a dict with status "error" and a message.
+    """
+    try:
+        return _ok(weather_client.get_historical_weather(location, date, units))
+    except Exception as exc:  # noqa: BLE001
+        return _error(exc, location)
+
+
+@mcp.tool
 def compare_cities(
     locations: list[str], date: str = "", units: str = DEFAULT_UNITS
 ) -> dict:
