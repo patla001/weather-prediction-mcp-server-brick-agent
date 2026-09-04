@@ -213,6 +213,8 @@ of trading tools: a FastMCP server (`weather/mcp_server/`) backed by Open-Meteo 
 and a dashboard app (`weather/dashboard/`). See
 [`weather/README.md`](weather/README.md) for its architecture, tool list, and setup steps.
 
+![Weather agent walkthrough](weather/screenshots/demo.gif)
+
 **Live apps** (Databricks workspace login required):
 
 - **Dashboard** - [weather-agent-dashboard](https://weather-agent-dashboard-2808874854650870.aws.databricksapps.com)

@@ -15,6 +15,24 @@ screenshots under each question** to show the same exchanges in the deployed age
 
 ---
 
+## Walkthrough
+
+![Weather agent walkthrough](screenshots/demo.gif)
+
+Five frames: the umbrella question and its tool call, the answer, the forecast question and its
+output, and the Lakebase-backed dashboard.
+
+## Dashboard
+
+![Weather agent dashboard](screenshots/dashboard.png)
+
+The live lookup panel at the top calls Open-Meteo through the same adapter the MCP tools use.
+The table below reads the `weather_predictions` table in Lakebase - the rows there were written
+by the MCP server while answering the questions in this file. The **User** column is empty
+because the Playground calls the app through a service principal, so there is no
+`X-Forwarded-Email` to attribute; the column populates when a signed-in user drives the tools.
+
+
 ## Q1. "Will it rain in Chicago tomorrow?"
 
 **Tool call:** `predict_umbrella_needed(location="Chicago", date="tomorrow")`
@@ -367,7 +385,9 @@ Output:
 The final answer cites the **40% threshold** and the **confidence level** rather than restating
 a raw forecast number - the judgment happens in `forecast_rules.py`, and the agent reports it.
 
-*(Screenshots of this exchange: `playground-tool-call.png`, `playground-answer.png`.)*
+![Playground tool call](screenshots/playground-tool-call.png)
+
+![Playground answer](screenshots/playground-answer.png)
 
 ### Second Playground exchange - `get_forecast`
 
@@ -439,4 +459,6 @@ get_forecast with 2 days (today + tomorrow)"), and it names the date - "Saturday
 2026" - by reading `days[].date` out of the tool response rather than assuming what tomorrow is.
 That is the behavior the relative-date rule in the system prompt exists to enforce.
 
-*(Screenshots: `playground-forecast-call.png`, `playground-forecast-answer.png`.)*
+![Playground forecast call](screenshots/playground-forecast-call.png)
+
+![Playground forecast answer](screenshots/playground-forecast-answer.png)

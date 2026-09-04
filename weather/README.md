@@ -148,6 +148,11 @@ Shared modules are duplicated between the two app folders for the same reason Da
 `alpaca_broker.py`: each Databricks App deploys independently from its own folder with its own
 `requirements.txt`, and there is no shared package install step across Apps.
 
+![Weather agent walkthrough](screenshots/demo.gif)
+
+*Asking the agent about San Diego in the AI Playground, and the Lakebase-backed dashboard that
+records what it decided. Full-size frames and more examples in [`DEMO.md`](DEMO.md).*
+
 ## Deployed apps
 
 Both apps run in the `dbc-7e085092-52e4` workspace, deployed from this repo's Git folder:
